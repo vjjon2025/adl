@@ -52,7 +52,7 @@ def memory_profile(device):
         from torch.profiler import profile
 
         mem = MemoryProfile()
-        with profile(activities=[torch.profiler.ProfilerActivity.CPU], profile_memory=True) as prof:
+        with profile(activities=[torch.profiler.ProfilerActivity.CPU], profile_memory=True, acc_events=True) as prof:
             yield mem
         mem.total = prof.events().total_average().self_cpu_memory_usage
     else:
