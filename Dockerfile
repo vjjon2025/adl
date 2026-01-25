@@ -4,6 +4,7 @@ FROM ubuntu:22.04
 #docker build -t adl_conda .
 #docker run -dit --name adl_hw1 --rm -u $(id -u):$(id -g) -v /Users/jjonnala/tmp/courses/adl/git/adl/hw/hw1:/app  -w /app adl_conda bash
 # docker exec -it -u jjonnala adl_hw1 bash
+#pip install torch --index-url https://download.pytorch.org/whl/cpu (in conda)
 
 # Avoid interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive
