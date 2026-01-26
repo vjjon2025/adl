@@ -43,7 +43,7 @@ class LoRALinear(HalfLinear):
         #return super().forward(x.float()).add(self.lora_b(self.lora_a(x.float())) * self.alpha_div_rank).to(x.dtype)
 
         x_dtype = x.dtype
-        x_fp32 = x.float()
+        x_fp32 = x.float() #Here if 16 and 32 bit data types mixup the backward accuracy gets messed up
         base_half_linear = super().forward(x_fp32)
         lora_out = self.lora_b.forward(self.lora_a.forward(x_fp32))
         lora_out_adjusted = lora_out * self.alpha_div_rank
