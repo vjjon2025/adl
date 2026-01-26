@@ -43,12 +43,20 @@ class QLoRALinear(Linear4Bit):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO: Forward. Make sure to cast inputs to self.linear_dtype and the output back to x.dtype
         #return super().forward(x.float()).add(self.lora_b(self.lora_a(x.float())) * self.alpha_div_rank).to(x.dtype)
+        device = x.device
         x_dtype = x.dtype
         x_fp32 = x.float() #Here if 16 and 32 bit data types mixup the backward accuracy gets messed up
-        base_half_linear = super().forward(x_fp32)
-        qlora_out = self.qlora_b.forward(self.qlora_a.forward(x_fp32))
-        qlora_out_adjusted = qlora_out * self.alpha_div_rank
-        return (base_half_linear + qlora_out_adjusted).to(x_dtype)        
+        base_4bit = super().forward(x_fp32.to(device)) #on to input device
+        #qlora_out = self.qlora_b.forward(self.qlora_a.forward(x_fp32))
+        qlora_out_adjusted = torch.nn.functional.linear(
+                                torch.nn.functional.linear(x_fp32.to(device), 
+                                                        self.qlora_a.weight.to(device),
+                                                        self.qlora_a.bias.to(device) if self.qlora_a.bias is not None else None
+                                ),
+                                self.qlora_b.weight.to(device),
+                                self.qlora_b.bias.to(device) if self.qlora_b.bias is not None else None
+                        ) * self.alpha_div_rank
+        return (base_4bit + qlora_out_adjusted).to(x_dtype)        
   
         # DONE: Forward. Make sure to cast inputs to self.linear_dtype and the output back to x.dtype
         #raise NotImplementedError()
