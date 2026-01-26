@@ -18,7 +18,7 @@ class HalfLinear(torch.nn.Linear):
         Feel free to set self.requires_grad_ to False, we will not backpropagate through this layer.
         """
         super().__init__(in_features, out_features, bias)
-        #self.weights = self.weight.to(torch.float16) not good practise and corect
+        #self.weights = self.weight.to(torch.float16) not good practise and corect  way
         self.half() #same as self.to(torch.float16)
         #self.bfloat16() #same as self.to(torch.bfloat16)
         #Trainable params and Backward memory are near zero in our implementation 
@@ -32,9 +32,14 @@ class HalfLinear(torch.nn.Linear):
         # The input and output should be of x.dtype = torch.float32
         # DONE: Implement me
         # Only on GPU (fp16 Linear is not for CPU)
+        device = x.device
         if not x.is_cuda:
             raise RuntimeError("HalfLinear requires CUDA")
-        y = super().forward(x.to(torch.float16))
+        weight = self.weight.to(device)
+        bias = self.bias.to(device) if self.bias is not None else None
+        x_fp16 = x.to(torch.float16)
+        y = torch.nn.functional.linear(x_fp16, weight, bias)
+        #y = super().forward(x.to(torch.float16))
         return y.to(x.dtype)
         #raise NotImplementedError()
 
