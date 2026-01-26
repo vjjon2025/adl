@@ -27,8 +27,9 @@ class LoRALinear(HalfLinear):
         """
         super().__init__(in_features, out_features, bias)
         
-        self.lora_a = HalfLinear(in_features, lora_dim, bias=False)
-        self.lora_b = HalfLinear(lora_dim, out_features, bias=False)
+        #Base weights are frozen in HalfLinear
+        self.lora_a = torch.nn.Linear(in_features, lora_dim, bias=False) #Keep the LoRA layers in float32
+        self.lora_b = torch.nn.Linear(lora_dim, out_features, bias=False) #Keep the LoRA layers in float32 not HalfLinear
         self.alpha_div_rank = 1.0  / float(lora_dim) # Scaling factor for LoRA
         torch.nn.init.kaiming_uniform_(self.lora_a.weight)
         torch.nn.init.zeros_(self.lora_b.weight) #Typically LoRA is not used on conv layers becuase they are already efficient
@@ -39,8 +40,10 @@ class LoRALinear(HalfLinear):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO: Forward. Make sure to cast inputs to self.linear_dtype and the output back to x.dtype
-        return super().forward(x) + \
-            self.alpha_div_rank * (self.lora_b.forward(self.lora_a.forward(x.to(torch.float16)))).to(x.dtype) 
+        base_half_linear = super().forward(x)
+        lora_out = self.lora_b.forward(self.lora_a.forward(x.to(torch.float32)))
+        lora_out_adjusted = lora_out * self.alpha_div_rank
+        return base_half_linear + lora_out_adjusted.to(x.dtype)        
         #raise NotImplementedError()
 
 
