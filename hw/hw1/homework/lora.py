@@ -40,10 +40,14 @@ class LoRALinear(HalfLinear):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO: Forward. Make sure to cast inputs to self.linear_dtype and the output back to x.dtype
-        base_half_linear = super().forward(x)
-        lora_out = self.lora_b.forward(self.lora_a.forward(x.to(torch.float32)))
+        #return super().forward(x.float()).add(self.lora_b(self.lora_a(x.float())) * self.alpha_div_rank).to(x.dtype)
+
+        x_dtype = x.dtype
+        x_fp32 = x.float()
+        base_half_linear = super().forward(x_fp32)
+        lora_out = self.lora_b.forward(self.lora_a.forward(x_fp32))
         lora_out_adjusted = lora_out * self.alpha_div_rank
-        return base_half_linear + lora_out_adjusted.to(x.dtype)        
+        return (base_half_linear + lora_out_adjusted).to(x_dtype)        
         #raise NotImplementedError()
 
 
