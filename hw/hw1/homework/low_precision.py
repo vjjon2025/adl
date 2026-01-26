@@ -80,10 +80,11 @@ class Linear4Bit(torch.nn.Module):
             #raise NotImplementedError()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        device = x.device  #everything on same device
         with torch.no_grad():
             # DONE: Dequantize and call the layer
             # Hint: You can use torch.nn.functional.linear
-            weight = block_dequantize_4bit(self.weight_q4, self.weight_norm).view(self._shape)
+            weight = block_dequantize_4bit(self.weight_q4.to(device), self.weight_norm.to(device)).view(self._shape)
             y = torch.nn.functional.linear(x, weight, self.bias)
             return y
            # raise NotImplementedError()
