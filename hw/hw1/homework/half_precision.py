@@ -18,8 +18,11 @@ class HalfLinear(torch.nn.Linear):
         Feel free to set self.requires_grad_ to False, we will not backpropagate through this layer.
         """
         super().__init__(in_features, out_features, bias)
+        #self.weights = self.weight.to(torch.float16) not good practise and corect
         self.half() #same as self.to(torch.float16)
         #self.bfloat16() #same as self.to(torch.bfloat16)
+        #Trainable params and Backward memory are near zero in our implementation 
+        #because we do not backpropagate through this layer
         self.requires_grad_(False) #we will not backpropagate through this layer
         # DONE: Implement me
         #raise NotImplementedError()
