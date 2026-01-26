@@ -46,9 +46,9 @@ class QLoRALinear(Linear4Bit):
         x_dtype = x.dtype
         x_fp32 = x.float() #Here if 16 and 32 bit data types mixup the backward accuracy gets messed up
         base_half_linear = super().forward(x_fp32)
-        lora_out = self.lora_b.forward(self.lora_a.forward(x_fp32))
-        lora_out_adjusted = lora_out * self.alpha_div_rank
-        return (base_half_linear + lora_out_adjusted).to(x_dtype)        
+        qlora_out = self.qlora_b.forward(self.qlora_a.forward(x_fp32))
+        qlora_out_adjusted = qlora_out * self.alpha_div_rank
+        return (base_half_linear + qlora_out_adjusted).to(x_dtype)        
   
         # DONE: Forward. Make sure to cast inputs to self.linear_dtype and the output back to x.dtype
         #raise NotImplementedError()
