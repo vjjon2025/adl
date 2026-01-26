@@ -30,7 +30,7 @@ class LoRALinear(HalfLinear):
         #Base weights are frozen in HalfLinear
         self.lora_a = torch.nn.Linear(in_features, lora_dim, bias=False) #Keep the LoRA layers in float32
         self.lora_b = torch.nn.Linear(lora_dim, out_features, bias=False) #Keep the LoRA layers in float32 not HalfLinear
-        self.alpha_div_rank = 1.0  / float(lora_dim) # Scaling factor for LoRA
+        self.alpha_div_rank = float(lora_dim) / float(lora_dim) # Scaling factor for LoRA
         torch.nn.init.kaiming_uniform_(self.lora_a.weight)
         torch.nn.init.zeros_(self.lora_b.weight) #Typically LoRA is not used on conv layers becuase they are already efficient
 
