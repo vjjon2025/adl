@@ -1,5 +1,6 @@
 import abc
 
+
 import torch
 
 
@@ -17,10 +18,10 @@ def hwc_to_chw(x: torch.Tensor) -> torch.Tensor:
     Convert an arbitrary tensor from (H, W, C) to (C, H, W) format.
     This allows us to switch from trnasformer-style channel-last to pytorch-style channel-first
     images. Works with or without the batch dimension.
-    """
+    """     
     dims = list(range(x.dim()))
     dims = dims[:-3] + [dims[-1]] + [dims[-3]] + [dims[-2]]
-    return x.permute(*dims)
+    return x.permute(*dims) #dims = [0, 3, 1, 2], *dims passes as 0, 3, 1, 2.
 
 
 def chw_to_hwc(x: torch.Tensor) -> torch.Tensor:
@@ -41,11 +42,11 @@ class PatchifyLinear(torch.nn.Module):
     Feel free to use this directly, or as an inspiration for how to use conv the the inputs given.
     """
 
-    def __init__(self, patch_size: int = 25, latent_dim: int = 128):
+    def __init__(self, patch_size: int = 25, latent_dim: int = 128): #expects (B, C, H, W)
         super().__init__()
         self.patch_conv = torch.nn.Conv2d(3, latent_dim, patch_size, patch_size, bias=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor: #(B, H, W, 3) HWC format
         """
         x: (B, H, W, 3) an image tensor dtype=float normalized to -1 ... 1
 
@@ -63,11 +64,11 @@ class UnpatchifyLinear(torch.nn.Module):
     Feel free to use this directly, or as an inspiration for how to use conv the the inputs given.
     """
 
-    def __init__(self, patch_size: int = 25, latent_dim: int = 128):
+    def __init__(self, patch_size: int = 25, latent_dim: int = 128): #expects (B, C, H, W)
         super().__init__()
         self.unpatch_conv = torch.nn.ConvTranspose2d(latent_dim, 3, patch_size, patch_size, bias=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor: #(B, w, h, latent_dim)  HWC format
         """
         x: (B, w, h, latent_dim) an embedding tensor
 
@@ -114,22 +115,55 @@ class PatchAutoEncoder(torch.nn.Module, PatchAutoEncoderBase):
 
         def __init__(self, patch_size: int, latent_dim: int, bottleneck: int):
             super().__init__()
-            raise NotImplementedError()
+            self.patchgen = PatchifyLinear(patch_size, latent_dim) #Input HWC format ret HWC format
+            self.en1 = torch.nn.Conv2d(latent_dim, latent_dim, kernel_size=3, padding=1)
+            self.gelu = torch.nn.GELU()
+            self.en2 = torch.nn.Conv2d(latent_dim, latent_dim, kernel_size=3, padding=1)
+            self.gelu2  = torch.nn.GELU()
+            self.bottle = torch.nn.Conv2d(latent_dim, bottleneck, kernel_size=3, padding=1)
+            #raise NotImplementedError()
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
-            raise NotImplementedError()
+            #raise NotImplementedError()
+            x = self.patchgen(x) #ret HWC format
+            x = hwc_to_chw(x) #convert to CHW format for conv layers
+            x = self.en1(x)            
+            x = self.gelu(x)
+            x = self.en2(x)
+            x = self.gelu2(x)
+            x = self.bottle(x) # x: (B, bottleneck, H//patch, W//patch)
+            x = chw_to_hwc(x)
+            return x
 
     class PatchDecoder(torch.nn.Module):
         def __init__(self, patch_size: int, latent_dim: int, bottleneck: int):
             super().__init__()
-            raise NotImplementedError()
+            self.unbottle = torch.nn.Conv2d(bottleneck, latent_dim, kernel_size=3, padding=1)
+            self.gelu1 = torch.nn.GELU()
+            self.de1 = torch.nn.Conv2d(latent_dim, latent_dim, kernel_size=3, padding=1)
+            self.gelu2  = torch.nn.GELU()
+            self.de2 = torch.nn.Conv2d(latent_dim, latent_dim, kernel_size=3, padding=1)            
+            self.unpatchgen = UnpatchifyLinear(patch_size, latent_dim) #Input HWC format ret HWC format
+            #raise NotImplementedError()
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
-            raise NotImplementedError()
+            #raise NotImplementedError()           
+            #x:(B, h, w, bottleneck) HWC format the z from encoder
+            x = hwc_to_chw(x)
+            x = self.unbottle(x)
+            x = self.gelu1(x)
+            x = self.de1(x)
+            x = self.gelu2(x)
+            x = self.de2(x)
+            x = chw_to_hwc(x)
+            x = self.unpatchgen(x) ##Input HWC format ret HWC format
+            return x
 
     def __init__(self, patch_size: int = 25, latent_dim: int = 128, bottleneck: int = 128):
         super().__init__()
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        self.encoder = self.PatchEncoder(patch_size, latent_dim, bottleneck)
+        self.decoder = self.PatchDecoder(patch_size, latent_dim, bottleneck)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
@@ -137,10 +171,16 @@ class PatchAutoEncoder(torch.nn.Module, PatchAutoEncoderBase):
         minimize (or even just visualize).
         You can return an empty dictionary if you don't have any additional terms.
         """
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x, {}
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        return self.encoder(x)
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        return self.decoder(x)
+    

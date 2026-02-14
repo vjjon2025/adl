@@ -44,9 +44,14 @@ class Tokenizer(abc.ABC):
 
 
 class BSQ(torch.nn.Module):
+    #Tensor shape B, H, W, C for input and output, B, H, W, codebook_bits for the latent code
     def __init__(self, codebook_bits: int, embedding_dim: int):
         super().__init__()
-        raise NotImplementedError()
+        self._codebook_bits = codebook_bits
+        self._embedding_dim = embedding_dim
+        self.linear_down = torch.nn.Linear(embedding_dim, codebook_bits)
+        self.linear_up = torch.nn.Linear(codebook_bits, embedding_dim)
+        #raise NotImplementedError()
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -55,14 +60,21 @@ class BSQ(torch.nn.Module):
         - L2 normalization
         - differentiable sign
         """
-        raise NotImplementedError()
+        linear_down = self.linear_down(x)   
+        x = torch.nn.functional.normalize(linear_down, p=2, dim=1) #along channel is dim=1, dim=0 is batch, dim=2 is h, dim=3 is w 
+        x = diff_sign(x)
+        return x
+        #    raise NotImplementedError()
+
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Implement the BSQ decoder:
         - A linear up-projection into embedding_dim should suffice
         """
-        raise NotImplementedError()
+        x = self.linear_up(x)
+        return x
+        #raise NotImplementedError()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decode(self.encode(x))
