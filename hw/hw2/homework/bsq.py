@@ -114,7 +114,8 @@ class BSQPatchAutoEncoder(PatchAutoEncoder, Tokenizer):
         super().__init__(patch_size=patch_size, latent_dim=latent_dim) #Calls PatchAutoEncoder init
         #PatchAutoEncoder returns B, H, W, C for the latent code, we want to apply BSQ to this code, (co-pilot comment) ATTRIBUTINON
         # #which means we need to reshape it to B, H, W, embedding_dim and then apply BSQ to get B, H, W, codebook_bits
-        BSQ.__init__(self, codebook_bits=codebook_bits, embedding_dim=latent_dim)        
+        #BSQ.__init__(self, codebook_bits=codebook_bits, embedding_dim=latent_dim)        
+        self.bsq = BSQ(codebook_bits, latent_dim)
         #raise NotImplementedError()
 
     def encode_index(self, x: torch.Tensor) -> torch.Tensor:
@@ -122,17 +123,17 @@ class BSQPatchAutoEncoder(PatchAutoEncoder, Tokenizer):
         #raise NotImplementedError()
 
     def decode_index(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decode(BSQ._index_to_code(self,x))
+        return self.decode(self.bsq._index_to_code(x))
         #raise NotImplementedError()
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         bottle = self.encoder(x) #encoder from PatchAutoEncoder
-        bsquantized = BSQ.encode(self,bottle)#BSQ encode
+        bsquantized = self.bsq.encode(bottle)#BSQ encode
         return bsquantized
         #raise NotImplementedError()
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decoder(BSQ.decode(self,x))
+        return self.decoder(self.bsq.decode(x))
         #raise NotImplementedError()
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
