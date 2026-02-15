@@ -60,6 +60,8 @@ class BSQ(torch.nn.Module):
         - L2 normalization
         - differentiable sign
         """
+        if x.dim() == 3:      #Add batch dimension if missing, so that we can process single images as well as batches of images
+            x = x.unsqueeze(0)
         B, H, W, C = x.shape
         x_flat = x.view(B*H*W, C)
         linear_down = self.linear_down(x_flat)   
@@ -119,7 +121,7 @@ class BSQPatchAutoEncoder(PatchAutoEncoder, Tokenizer):
         #raise NotImplementedError()
 
     def encode_index(self, x: torch.Tensor) -> torch.Tensor:
-        return BSQ._code_to_index(self,self.encode(x))
+        return self.bsq._code_to_index(self.encode(x))
         #raise NotImplementedError()
 
     def decode_index(self, x: torch.Tensor) -> torch.Tensor:
